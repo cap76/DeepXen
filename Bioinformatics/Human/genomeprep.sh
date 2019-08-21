@@ -1,0 +1,1 @@
+STAR --runMode genomeGenerate --genomeDir STARgenome --genomeFastaFiles /mnt/scratch/surani/cap76/Genomes/UCSC/hg19/Sequence/WholeGenomeFasta/genome.fa --sjdbGTFfile /mnt/scratch/surani/cap76/Genomes/UCSC/hg19/Annotation/Genes/genes.gtf --sjdbOverhang 100
