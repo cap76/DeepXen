@@ -28,3 +28,25 @@ Note that there may be some difference in the scales, and we may need to manuall
 these for final plots. 
 
 There are also corresponding set of plots for the BG datasets.
+
+
+#Models for the GB
+
+#SomEndoGB
+ResultsSomiteEndoAllGB/Model_seed=2.h5 - full
+Model.h5 - full
+Model_pos_seed=2.h5
+Model_pos.h5
+Model_neg_seed=2.h5
+Model_neg.h5
+
+#Endo
+ResultsEndoAllGB/Model_seed=2.h5
+Model_seed=2.h5 - full
+Model_contneg_seed=2.h5
+Model_contneg.h5
+Model_cont_seed=2.h5
+Model_cont.h5
+
+#Models for TSS
+
