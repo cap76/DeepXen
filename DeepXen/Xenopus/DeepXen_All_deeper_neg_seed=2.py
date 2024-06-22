@@ -107,7 +107,7 @@ class GetBest(Callback):
                                                        self.best))
         self.model.set_weights(self.best_weights)
 
-np.random.seed(0)
+np.random.seed(1)
 
 #Process the data. Include this so everyhting is repeatable.
 #os.chdir('./ChIP_Endo')
@@ -157,14 +157,7 @@ for i in range(0, np.shape(Yalt)[0]):
 
 np.nan_to_num(Xexpa,copy=False)
 
-#fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*bwe.tab'))
-fil1=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Endo*bwe.tab')) 
-#fil2=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Ecto*bwe.tab'))
-fil3=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/GC.bwe.tab'))
-fil4=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*Methylation.bwe.tab'))
-
-fil=fil1+fil3+fil4
-
+fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*bwe.tab'))
 
 #Load in all the expression data
 encoder = LabelEncoder()
@@ -317,17 +310,17 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 
 model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
-model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_neg_endoOnly.h5')
+model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_neg_seed=2.h5')
 
 
-#predictions = model.predict([Xchr], batch_size=1000)
+predictions = model.predict([Xchr], batch_size=1000)
 
-#Scores = np.zeros((3,1))
-#Scores[0,0] = model.evaluate([Xchr[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
-#Scores[1,0] = model.evaluate([Xchr[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
-#Scores[2,0] = model.evaluate([Xchr[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
+Scores = np.zeros((3,1))
+Scores[0,0] = model.evaluate([Xchr[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
+Scores[1,0] = model.evaluate([Xchr[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
+Scores[2,0] = model.evaluate([Xchr[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
 
-#pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_scores_deeper_neg.csv')
+pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_scores_deeper_neg_seed=2.csv')
 
 #model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model.h5')
 
@@ -378,7 +371,7 @@ df16 = pd.DataFrame(Yalt[:,4],columns=['C12'])
 df14b = pd.DataFrame(predictions,columns=['pC1','pC2','pC3','pC4','pC5'])
 
 prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14,df15,df16, df14b),1)
-pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_deeper_neg.csv')
+pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_deeper_neg_seed=2.csv')
 
 #Now process the results
 #os.chdir('ResultsEndoAll')

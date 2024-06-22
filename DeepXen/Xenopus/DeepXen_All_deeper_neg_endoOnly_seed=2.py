@@ -107,7 +107,7 @@ class GetBest(Callback):
                                                        self.best))
         self.model.set_weights(self.best_weights)
 
-np.random.seed(0)
+np.random.seed(1)
 
 #Process the data. Include this so everyhting is repeatable.
 #os.chdir('./ChIP_Endo')
@@ -213,7 +213,7 @@ testset=((Output2['f0']==meh.classes_[np.shape(meh.classes_)[0]-3]) | (Output2['
 #Normalise the expression data
 Xexp = copy.deepcopy(Xexpa)
 Xexp[:,0,0] = ( Xexp[:,0,0] - np.nanmean(Xexp[trainset,0,0]) ) / np.nanstd(Xexp[trainset,0,0])
-Xexp[:,0,1] = ( Xexp[:,0,1] - np.nanmean(Xexp[trainset,0,1]) ) / np.nanstd(Xexp[trainset,0,1])
+#Xexp[:,0,1] = ( Xexp[:,0,1] - np.nanmean(Xexp[trainset,0,1]) ) / np.nanstd(Xexp[trainset,0,1])
 #Xexp[:,0,3] = ( Xexp[:,0,3] - np.nanmean(Xexp[trainset,0,3]) ) / np.nanstd(Xexp[trainset,0,3])
 
 Xchra = copy.deepcopy(Xchr)
@@ -315,9 +315,9 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 #model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks)
 #model.fit([Xchr[trainset,:,:],Xexp[trainset,:,0:2]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,0:2,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks,class_weight = class_weight)
 
-model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
+model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=500, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
-model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_neg_endoOnly.h5')
+model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_neg_endoOnly_seed=2.h5')
 
 
 #predictions = model.predict([Xchr], batch_size=1000)

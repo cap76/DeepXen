@@ -107,7 +107,7 @@ class GetBest(Callback):
                                                        self.best))
         self.model.set_weights(self.best_weights)
 
-np.random.seed(0)
+np.random.seed(2)
 
 #Process the data. Include this so everyhting is repeatable.
 #os.chdir('./ChIP_Endo')
@@ -157,14 +157,7 @@ for i in range(0, np.shape(Yalt)[0]):
 
 np.nan_to_num(Xexpa,copy=False)
 
-#fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*bwe.tab'))
-fil1=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Endo*bwe.tab')) 
-#fil2=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Ecto*bwe.tab'))
-fil3=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/GC.bwe.tab'))
-fil4=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*Methylation.bwe.tab'))
-
-fil=fil1+fil3+fil4
-
+fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*bwe.tab'))
 
 #Load in all the expression data
 encoder = LabelEncoder()
@@ -270,12 +263,12 @@ flat6 = Flatten()(layer6_1b)
 
 
 #Auxillary input (fully connected) for IVF and Donor expression (and other motifs)
-#visible2 = Input(shape=(1,2))
+visible2 = Input(shape=(1,2))
 
-#layer5_1 = Dense(10, activation='relu')(visible2)
-#flat5 = Flatten()(layer5_1)
+layer5_1 = Dense(10, activation='relu')(visible2)
+flat5 = Flatten()(layer5_1)
 
-merge = concatenate([flat3,flat4,flat6])
+merge = concatenate([flat3,flat4,flat6,flat5])
 
 # interpretation model
 hidden1 = Dense(50, activation='relu')(merge)
@@ -287,7 +280,7 @@ hidden2 = Dense(20, activation='relu')(hidden1)
 output1 = Dense(np.shape(Yalt)[1])(hidden2)
 output  = Activation('softmax')(output1)
 
-model = Model(inputs=[visible1], outputs=output)
+model = Model(inputs=[visible1,visible2], outputs=output)
 # summarize layers
 print(model.summary())
 # plot graph
@@ -315,19 +308,19 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 #model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks)
 #model.fit([Xchr[trainset,:,:],Xexp[trainset,:,0:2]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,0:2,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks,class_weight = class_weight)
 
-model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
+model.fit([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:]), epochs=500, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
-model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_neg_endoOnly.h5')
+model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_seed=3.h5')
 
 
-#predictions = model.predict([Xchr], batch_size=1000)
+predictions = model.predict([Xchr,Xexp], batch_size=1000)
 
-#Scores = np.zeros((3,1))
-#Scores[0,0] = model.evaluate([Xchr[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
-#Scores[1,0] = model.evaluate([Xchr[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
-#Scores[2,0] = model.evaluate([Xchr[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
+Scores = np.zeros((3,1))
+Scores[0,0] = model.evaluate([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
+Scores[1,0] = model.evaluate([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
+Scores[2,0] = model.evaluate([Xchr[valset,:,:],Xexp[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
 
-#pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_scores_deeper_neg.csv')
+pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_scores_deeper_seed=3.csv')
 
 #model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model.h5')
 
@@ -378,7 +371,7 @@ df16 = pd.DataFrame(Yalt[:,4],columns=['C12'])
 df14b = pd.DataFrame(predictions,columns=['pC1','pC2','pC3','pC4','pC5'])
 
 prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14,df15,df16, df14b),1)
-pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_deeper_neg.csv')
+pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_deeper_seed=3.csv')
 
 #Now process the results
 #os.chdir('ResultsEndoAll')
@@ -453,87 +446,87 @@ plt.switch_backend('agg')
 #os.chdir('../')
 #
 #Now we are going to load in the other datasets and make predictions
-OutSomEcto = genfromtxt('BW_SomiteEcto_All/allpeaks_labelled_cum_final.s.bed',delimiter='\t',dtype=None)
-YSomEcto = np.zeros((np.shape(OutSomEcto)[0],5))
+#OutSomEcto = genfromtxt('BW_SomiteEcto_All/allpeaks_labelled_cum_final.s.bed',delimiter='\t',dtype=None)
+#YSomEcto = np.zeros((np.shape(OutSomEcto)[0],5))
 #YSomEcto[0:np.shape(OutSomEcto)[0],0] = OutSomEcto['f11']
 #YSomEcto[0:np.shape(OutSomEcto)[0],1] = OutSomEcto['f12']
 #YSomEcto[0:np.shape(OutSomEcto)[0],2] = OutSomEcto['f13']
 #YSomEcto[0:np.shape(OutSomEcto)[0],1] = OutSomEcto['f14']
 #YSomEcto[0:np.shape(OutSomEcto)[0],2] = OutSomEcto['f15']
 
-onlist = genfromtxt('ChIP_SomiteEcto_All/OnMemFDRtGenes.txt',delimiter='\t',dtype=None)
-downlist = genfromtxt('ChIP_SomiteEcto_All/ReprogrammedDowntGenes.txt',delimiter='\t',dtype=None)
-offlist = genfromtxt('ChIP_SomiteEcto_All/OffMemFDRtGenes.txt',delimiter='\t',dtype=None)
-uplist = genfromtxt('ChIP_SomiteEcto_All/ReprogrammedUptGenes.txt',delimiter='\t',dtype=None)
-complist = genfromtxt('ChIP_SomiteEcto_All/ComplementarySettGenes.txt',delimiter='\t',dtype=None)
-Xexp2 = np.zeros((np.shape(OutSomEcto)[0],1,3))
+#onlist = genfromtxt('ChIP_SomiteEcto_All/OnMemFDRtGenes.txt',delimiter='\t',dtype=None)
+#downlist = genfromtxt('ChIP_SomiteEcto_All/ReprogrammedDowntGenes.txt',delimiter='\t',dtype=None)
+#offlist = genfromtxt('ChIP_SomiteEcto_All/OffMemFDRtGenes.txt',delimiter='\t',dtype=None)
+#uplist = genfromtxt('ChIP_SomiteEcto_All/ReprogrammedUptGenes.txt',delimiter='\t',dtype=None)
+#complist = genfromtxt('ChIP_SomiteEcto_All/ComplementarySettGenes.txt',delimiter='\t',dtype=None)
+#Xexp2 = np.zeros((np.shape(OutSomEcto)[0],1,3))
+#
+#for i in range(0, np.shape(YSomEcto)[0]):
+#      YSomEcto[i,0] = (np.intersect1d(OutSomEcto['f3'][i],onlist)).size
+#      YSomEcto[i,1] = (np.intersect1d(OutSomEcto['f3'][i],downlist)).size
+#      YSomEcto[i,2] = (np.intersect1d(OutSomEcto['f3'][i],offlist)).size
+#      YSomEcto[i,3] = (np.intersect1d(OutSomEcto['f3'][i],uplist)).size
+#      YSomEcto[i,4] = 1-max(YSomEcto[i,0:4]) #(np.intersect1d(OutSomEcto['f3'][i],complist)).size
+#      Xexp2[i,0,2] = (np.intersect1d(OutSomEcto['f3'][i],foxlist)).size
 
-for i in range(0, np.shape(YSomEcto)[0]):
-      YSomEcto[i,0] = (np.intersect1d(OutSomEcto['f3'][i],onlist)).size
-      YSomEcto[i,1] = (np.intersect1d(OutSomEcto['f3'][i],downlist)).size
-      YSomEcto[i,2] = (np.intersect1d(OutSomEcto['f3'][i],offlist)).size
-      YSomEcto[i,3] = (np.intersect1d(OutSomEcto['f3'][i],uplist)).size
-      YSomEcto[i,4] = 1-max(YSomEcto[i,0:4]) #(np.intersect1d(OutSomEcto['f3'][i],complist)).size
-      Xexp2[i,0,2] = (np.intersect1d(OutSomEcto['f3'][i],foxlist)).size
-
-XchrSomEcto = np.zeros((np.shape(OutSomEcto)[0],600,np.shape(fil)[0]))
-for k in range(0, np.shape(fil)[0]):
-        tempfil=fil[k].replace("/BW_Endo_All/","/BW_SomiteEcto_All/")
-        tempfil2=tempfil.replace("Endo_","Ectos_")
-        tempfil3=tempfil2.replace("Ecto_","Endoa_")
-        tempfil4=tempfil3.replace("Ectos_","Ecto_")
-        tempfil5=tempfil4.replace("Endoa_","Endo_")
-        #tempdata = genfromtxt(tempfil5,delimiter='\t')
-        Output = genfromtxt(tempfil5,delimiter='\t',dtype=None, skip_header=3)
-        XchrSomEcto[0:np.shape(Output)[0],0:np.shape(Output)[1],k] = Output
+#XchrSomEcto = np.zeros((np.shape(OutSomEcto)[0],600,np.shape(fil)[0]))
+#for k in range(0, np.shape(fil)[0]):
+#        tempfil=fil[k].replace("/BW_Endo_All/","/BW_SomiteEcto_All/")
+#        tempfil2=tempfil.replace("Endo_","Ectos_")
+#        tempfil3=tempfil2.replace("Ecto_","Endoa_")
+#        tempfil4=tempfil3.replace("Ectos_","Ecto_")
+#        tempfil5=tempfil4.replace("Endoa_","Endo_")
+#        #tempdata = genfromtxt(tempfil5,delimiter='\t')
+#        Output = genfromtxt(tempfil5,delimiter='\t',dtype=None, skip_header=3)
+#        XchrSomEcto[0:np.shape(Output)[0],0:np.shape(Output)[1],k] = Output
 
 
 #Normalise (all data can only be normalised by training data)
-for k in range(0, np.shape(fil)[0]):
-      XchrSomEcto[:,0:100,k] = ( XchrSomEcto[:,0:100,k] - np.nanmean(Xchra[:,0:100,k]) ) / np.nanstd(Xchra[:,0:100,k])
+#for k in range(0, np.shape(fil)[0]):
+#      XchrSomEcto[:,0:600,k] = ( XchrSomEcto[:,0:600,k] - np.nanmean(Xchra[:,0:600,k]) ) / np.nanstd(Xchra[:,0:600,k])
 
 #Xexp2 = np.zeros((np.shape(OutSomEcto)[0],1,3))
-Xexp2[0:np.shape(OutSomEcto)[0],0,0] = np.log2(OutSomEcto['f4']+1)
-Xexp2[0:np.shape(OutSomEcto)[0],0,1] = np.log2(OutSomEcto['f5']+1)
-Xexp2[0:np.shape(OutSomEcto)[0],0,3] = np.log2(OutSomEcto['f6']+1)
-np.nan_to_num(Xexp,copy=False)
+#Xexp2[0:np.shape(OutSomEcto)[0],0,0] = np.log2(OutSomEcto['f4']+1)
+#Xexp2[0:np.shape(OutSomEcto)[0],0,1] = np.log2(OutSomEcto['f5']+1)
+#Xexp2[0:np.shape(OutSomEcto)[0],0,3] = np.log2(OutSomEcto['f6']+1)
+#np.nan_to_num(Xexp,copy=False)
 
 #Normalise based on the original scaling form endoderm
-Xexp2[:,0,0] = ( Xexp2[:,0,0] - np.nanmean(Xexpa[trainset,0,0]) ) / np.nanstd(Xexpa[trainset,0,0])
-Xexp2[:,0,1] = ( Xexp2[:,0,1] - np.nanmean(Xexpa[trainset,0,1]) ) / np.nanstd(Xexpa[trainset,0,1])
-Xexp2[:,0,3] = ( Xexp2[:,0,3] - np.nanmean(Xexpa[trainset,0,3]) ) / np.nanstd(Xexpa[trainset,0,3])
+#Xexp2[:,0,0] = ( Xexp2[:,0,0] - np.nanmean(Xexpa[trainset,0,0]) ) / np.nanstd(Xexpa[trainset,0,0])
+#Xexp2[:,0,1] = ( Xexp2[:,0,1] - np.nanmean(Xexpa[trainset,0,1]) ) / np.nanstd(Xexpa[trainset,0,1])
+#Xexp2[:,0,3] = ( Xexp2[:,0,3] - np.nanmean(Xexpa[trainset,0,3]) ) / np.nanstd(Xexpa[trainset,0,3])
 
 
 
-ScoresSomEct = np.zeros((1,1))
-ScoresSomEct[0,0] = model.evaluate([XchrSomEcto,Xexp2[:,0:3]], YSomEcto, batch_size=32)[1]
-pd.DataFrame(ScoresSomEct, columns=['Accuracy']).to_csv('ResultsEndoAll/prediction_SomEct_scores.csv')
+#ScoresSomEct = np.zeros((1,1))
+#ScoresSomEct[0,0] = model.evaluate([XchrSomEcto,Xexp2[:,0:3]], YSomEcto, batch_size=32)[1]
+#pd.DataFrame(ScoresSomEct, columns=['Accuracy']).to_csv('ResultsEndoAll/prediction_SomEct_scores.csv')
 
-predictions = model.predict([XchrSomEcto,Xexp2[:,0:3]], batch_size=1000)
+#predictions = model.predict([XchrSomEcto,Xexp2[:,0:3]], batch_size=1000)
 
-df1 = pd.DataFrame(OutSomEcto['f0'],columns=['chr'])
-df2 = pd.DataFrame(OutSomEcto['f1'],columns=['start'])
-df3 = pd.DataFrame(OutSomEcto['f2'],columns=['end'])
-df4 = pd.DataFrame(OutSomEcto['f3'],columns=['C1'])
-df5 = pd.DataFrame(OutSomEcto['f4'],columns=['C2'])
-df6 = pd.DataFrame(OutSomEcto['f5'],columns=['C3'])
-df7 = pd.DataFrame(OutSomEcto['f6'],columns=['C3'])
-df8 = pd.DataFrame(OutSomEcto['f7'],columns=['C4'])
-df9 = pd.DataFrame(OutSomEcto['f8'],columns=['C5'])
-df10 = pd.DataFrame(OutSomEcto['f9'],columns=['C6'])
-df11 = pd.DataFrame(OutSomEcto['f10'],columns=['C7'])
+#df1 = pd.DataFrame(OutSomEcto['f0'],columns=['chr'])
+#df2 = pd.DataFrame(OutSomEcto['f1'],columns=['start'])
+#df3 = pd.DataFrame(OutSomEcto['f2'],columns=['end'])
+#df4 = pd.DataFrame(OutSomEcto['f3'],columns=['C1'])
+#df5 = pd.DataFrame(OutSomEcto['f4'],columns=['C2'])
+#df6 = pd.DataFrame(OutSomEcto['f5'],columns=['C3'])
+#df7 = pd.DataFrame(OutSomEcto['f6'],columns=['C3'])
+#df8 = pd.DataFrame(OutSomEcto['f7'],columns=['C4'])
+#df9 = pd.DataFrame(OutSomEcto['f8'],columns=['C5'])
+#df10 = pd.DataFrame(OutSomEcto['f9'],columns=['C6'])
+#df11 = pd.DataFrame(OutSomEcto['f10'],columns=['C7'])
 
-df12 = pd.DataFrame(YSomEcto[:,0],columns=['C8'])
-df13 = pd.DataFrame(YSomEcto[:,1],columns=['C9'])
-df14 = pd.DataFrame(YSomEcto[:,2],columns=['C10'])
-df15 = pd.DataFrame(YSomEcto[:,3],columns=['C11'])
-df16 = pd.DataFrame(YSomEcto[:,4],columns=['C12'])
+#df12 = pd.DataFrame(YSomEcto[:,0],columns=['C8'])
+#df13 = pd.DataFrame(YSomEcto[:,1],columns=['C9'])
+#df14 = pd.DataFrame(YSomEcto[:,2],columns=['C10'])
+#df15 = pd.DataFrame(YSomEcto[:,3],columns=['C11'])
+#df16 = pd.DataFrame(YSomEcto[:,4],columns=['C12'])
 
 
-df14b = pd.DataFrame(predictions,columns=['pC1','pC2','pC3','pC4','pC5'])
+#df14b = pd.DataFrame(predictions,columns=['pC1','pC2','pC3','pC4','pC5'])
 
-prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14, df15, df16, df14b),1)
-pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('ResultsEndoAll/prediction_SomEcto.csv')
+#prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14, df15, df16, df14b),1)
+#pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('ResultsEndoAll/prediction_SomEcto.csv')
  
 
 #os.chdir('ResultsEndoAll')

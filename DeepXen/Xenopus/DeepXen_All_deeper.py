@@ -157,6 +157,10 @@ for i in range(0, np.shape(Yalt)[0]):
 
 np.nan_to_num(Xexpa,copy=False)
 
+fil1=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Endo*bwe.tab'))
+fil2=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Ecto*bwe.tab'))
+fil33=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/GC*bwe.tab'))
+fil4=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Meth*bwe.tab'))
 fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*bwe.tab'))
 
 #Load in all the expression data
@@ -469,7 +473,7 @@ for i in range(0, np.shape(YSomEcto)[0]):
       YSomEcto[i,4] = 1-max(YSomEcto[i,0:4]) #(np.intersect1d(OutSomEcto['f3'][i],complist)).size
       Xexp2[i,0,2] = (np.intersect1d(OutSomEcto['f3'][i],foxlist)).size
 
-XchrSomEcto = np.zeros((np.shape(OutSomEcto)[0],100,np.shape(fil)[0]))
+XchrSomEcto = np.zeros((np.shape(OutSomEcto)[0],600,np.shape(fil)[0]))
 for k in range(0, np.shape(fil)[0]):
         tempfil=fil[k].replace("/BW_Endo_All/","/BW_SomiteEcto_All/")
         tempfil2=tempfil.replace("Endo_","Ectos_")
@@ -483,7 +487,7 @@ for k in range(0, np.shape(fil)[0]):
 
 #Normalise (all data can only be normalised by training data)
 for k in range(0, np.shape(fil)[0]):
-      XchrSomEcto[:,0:100,k] = ( XchrSomEcto[:,0:100,k] - np.nanmean(Xchra[:,0:100,k]) ) / np.nanstd(Xchra[:,0:100,k])
+      XchrSomEcto[:,0:600,k] = ( XchrSomEcto[:,0:600,k] - np.nanmean(Xchra[:,0:600,k]) ) / np.nanstd(Xchra[:,0:600,k])
 
 #Xexp2 = np.zeros((np.shape(OutSomEcto)[0],1,3))
 Xexp2[0:np.shape(OutSomEcto)[0],0,0] = np.log2(OutSomEcto['f4']+1)

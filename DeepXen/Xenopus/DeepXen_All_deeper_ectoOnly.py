@@ -138,7 +138,7 @@ enhlist = genfromtxt('BW_Endo_All2/enhancers.bed',delimiter='\t',dtype=None)
 
 #Generate the Y matrix
 Yalt = np.zeros((np.shape(Output2)[0],5))
-Xexpa = np.zeros((np.shape(Output2)[0],1,2))
+Xexpa = np.zeros((np.shape(Output2)[0],1,1))
 
 for i in range(0, np.shape(Yalt)[0]):
       Yalt[i,0] = (np.intersect1d(Output2['f3'][i],onlist)).size
@@ -151,20 +151,20 @@ explist = genfromtxt('ChIP_Endo_All/edger_de_pairing_BIGtable_endoIVF_ectoDonor_
 
 for i in range(0, np.shape(Yalt)[0]):
    arr_ind = np.where(Output2['f3'][i] == explist['f0'])
-   Xexpa[i,0,0] = np.log2(explist['f1'][arr_ind].astype('f')+1)
-   Xexpa[i,0,1] = np.log2(explist['f2'][arr_ind].astype('f')+1)
+   #Xexpa[i,0,0] = np.log2(explist['f1'][arr_ind].astype('f')+1)
+   Xexpa[i,0,0] = np.log2(explist['f2'][arr_ind].astype('f')+1)
 
 
 np.nan_to_num(Xexpa,copy=False)
 
 #fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*bwe.tab'))
-fil1=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Endo*bwe.tab')) 
-#fil2=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Ecto*bwe.tab'))
+
+#fil1=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Endo*bwe.tab')) 
+fil2=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/Ecto*bwe.tab'))
 fil3=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/GC.bwe.tab'))
 fil4=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_Endo_All2/*Methylation.bwe.tab'))
 
-fil=fil1+fil3+fil4
-
+fil=fil2+fil3+fil4
 
 #Load in all the expression data
 encoder = LabelEncoder()
@@ -270,12 +270,12 @@ flat6 = Flatten()(layer6_1b)
 
 
 #Auxillary input (fully connected) for IVF and Donor expression (and other motifs)
-#visible2 = Input(shape=(1,2))
+visible2 = Input(shape=(1,1))
 
-#layer5_1 = Dense(10, activation='relu')(visible2)
-#flat5 = Flatten()(layer5_1)
+layer5_1 = Dense(10, activation='relu')(visible2)
+flat5 = Flatten()(layer5_1)
 
-merge = concatenate([flat3,flat4,flat6])
+merge = concatenate([flat3,flat4,flat6,flat5])
 
 # interpretation model
 hidden1 = Dense(50, activation='relu')(merge)
@@ -287,7 +287,7 @@ hidden2 = Dense(20, activation='relu')(hidden1)
 output1 = Dense(np.shape(Yalt)[1])(hidden2)
 output  = Activation('softmax')(output1)
 
-model = Model(inputs=[visible1], outputs=output)
+model = Model(inputs=[visible1,visible2], outputs=output)
 # summarize layers
 print(model.summary())
 # plot graph
@@ -315,19 +315,19 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 #model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks)
 #model.fit([Xchr[trainset,:,:],Xexp[trainset,:,0:2]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,0:2,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks,class_weight = class_weight)
 
-model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
+model.fit([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:]), epochs=500, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
-model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_neg_endoOnly.h5')
+model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model_deeper_ectoOnly.h5')
 
 
-#predictions = model.predict([Xchr], batch_size=1000)
+#predictions = model.predict([Xchr,Xexp], batch_size=1000)
 
 #Scores = np.zeros((3,1))
-#Scores[0,0] = model.evaluate([Xchr[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
-#Scores[1,0] = model.evaluate([Xchr[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
-#Scores[2,0] = model.evaluate([Xchr[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
+#Scores[0,0] = model.evaluate([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
+#Scores[1,0] = model.evaluate([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
+#Scores[2,0] = model.evaluate([Xchr[valset,:,:],Xexp[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
 
-#pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_scores_deeper_neg.csv')
+#pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_scores_deeper_endoOnly.csv')
 
 #model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model.h5')
 
@@ -377,8 +377,8 @@ df16 = pd.DataFrame(Yalt[:,4],columns=['C12'])
 
 df14b = pd.DataFrame(predictions,columns=['pC1','pC2','pC3','pC4','pC5'])
 
-prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14,df15,df16, df14b),1)
-pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_deeper_neg.csv')
+#prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14,df15,df16, df14b),1)
+#pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/prediction_deeper.csv')
 
 #Now process the results
 #os.chdir('ResultsEndoAll')
@@ -490,7 +490,7 @@ for k in range(0, np.shape(fil)[0]):
 
 #Normalise (all data can only be normalised by training data)
 for k in range(0, np.shape(fil)[0]):
-      XchrSomEcto[:,0:100,k] = ( XchrSomEcto[:,0:100,k] - np.nanmean(Xchra[:,0:100,k]) ) / np.nanstd(Xchra[:,0:100,k])
+      XchrSomEcto[:,0:600,k] = ( XchrSomEcto[:,0:600,k] - np.nanmean(Xchra[:,0:600,k]) ) / np.nanstd(Xchra[:,0:600,k])
 
 #Xexp2 = np.zeros((np.shape(OutSomEcto)[0],1,3))
 Xexp2[0:np.shape(OutSomEcto)[0],0,0] = np.log2(OutSomEcto['f4']+1)
