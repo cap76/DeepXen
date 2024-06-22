@@ -108,7 +108,7 @@ class GetBest(Callback):
                                                        self.best))
         self.model.set_weights(self.best_weights)
 
-np.random.seed(0)
+np.random.seed(1)
 
 #Process the data. Include this so everyhting is repeatable.
 #os.chdir('./ChIP_Endo')
@@ -315,7 +315,7 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 
 model.fit([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
-model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/Model_deeper.h5')
+model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/Model_deeper_seed=2.h5')
 
 
 predictions = model.predict([Xchr,Xexp], batch_size=1000)
@@ -325,7 +325,7 @@ Scores[0,0] = model.evaluate([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[train
 Scores[1,0] = model.evaluate([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
 Scores[2,0] = model.evaluate([Xchr[valset,:,:],Xexp[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
 
-pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_scores_deeper.csv')
+pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_scores_deeper_seed=2.csv')
 
 #model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model.h5')
 
@@ -376,7 +376,7 @@ df16 = pd.DataFrame(Yalt[:,4],columns=['C12'])
 df14b = pd.DataFrame(predictions,columns=['pC1','pC2','pC3','pC4','pC5'])
 
 prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14,df15,df16, df14b),1)
-pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_deeper.csv')
+pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_deeper_seed=2.csv')
 
 #Now process the results
 #os.chdir('ResultsEndoAll')

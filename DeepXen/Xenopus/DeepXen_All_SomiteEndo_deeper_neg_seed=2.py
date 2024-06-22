@@ -108,7 +108,7 @@ class GetBest(Callback):
                                                        self.best))
         self.model.set_weights(self.best_weights)
 
-np.random.seed(0)
+np.random.seed(1)
 
 #Process the data. Include this so everyhting is repeatable.
 #os.chdir('./ChIP_Endo')
@@ -149,8 +149,6 @@ for i in range(0, np.shape(Yalt)[0]):
       Yalt[i,4] = 1-max(Yalt[i,0:4]) 
 
 explist = genfromtxt('ChIP_SomiteEndo_All/edger_de_pairing_BIGtable_endoIVF_somiteDonor_endoNT_plus_DE.p.csv',delimiter='\t',dtype=None)
-
-#explist = genfromtxt('ChIP_SomiteEndo_All/edger_de_pairing_BIGtable_ectoIVF_somiteDonor_ectoNT_plus_DE.p.csv',delimiter='\t',dtype=None)
 #explist = genfromtxt('ChIP_SomiteEcto_All/edger_de_pairing_BIGtable_endoIVF_ectoDonor_endoNT_plus_DE.p.csv',delimiter='\t',dtype=None)
 
 for i in range(0, np.shape(Yalt)[0]):
@@ -266,13 +264,13 @@ layer6_1b = Dropout(0.4)(pool6_1)
 flat6 = Flatten()(layer6_1b)
 
 
-#Auxillary input (fully connected) for IVF and Donor expression (and other motifs)
-visible2 = Input(shape=(1,2))
+##Auxillary input (fully connected) for IVF and Donor expression (and other motifs)
+#visible2 = Input(shape=(1,2))
 
-layer5_1 = Dense(10, activation='relu')(visible2)
-flat5 = Flatten()(layer5_1)
+#layer5_1 = Dense(10, activation='relu')(visible2)
+#flat5 = Flatten()(layer5_1)
 
-merge = concatenate([flat3,flat4,flat6,flat5])
+merge = concatenate([flat3,flat4,flat6])
 
 
 # interpretation model
@@ -285,7 +283,7 @@ hidden2 = Dense(20, activation='relu')(hidden1)
 output1 = Dense(np.shape(Yalt)[1])(hidden2)
 output  = Activation('softmax')(output1)
 
-model = Model(inputs=[visible1,visible2], outputs=output)
+model = Model(inputs=[visible1], outputs=output)
 # summarize layers
 print(model.summary())
 # plot graph
@@ -313,19 +311,19 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 #model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks)
 #model.fit([Xchr[trainset,:,:],Xexp[trainset,:,0:2]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,0:2,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks,class_weight = class_weight)
 
-model.fit([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
+model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=500, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
-model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/Model_deeper.h5')
+model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/Model_deeper_neg_seed=2.h5')
 
 
 predictions = model.predict([Xchr,Xexp], batch_size=1000)
 
 Scores = np.zeros((3,1))
-Scores[0,0] = model.evaluate([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
-Scores[1,0] = model.evaluate([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
-Scores[2,0] = model.evaluate([Xchr[valset,:,:],Xexp[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
+Scores[0,0] = model.evaluate([Xchr[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
+Scores[1,0] = model.evaluate([Xchr[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
+Scores[2,0] = model.evaluate([Xchr[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
 
-pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_scores_deeper.csv')
+pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_scores_deeper_neg_seed=2.csv')
 
 #model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model.h5')
 
@@ -376,7 +374,7 @@ df16 = pd.DataFrame(Yalt[:,4],columns=['C12'])
 df14b = pd.DataFrame(predictions,columns=['pC1','pC2','pC3','pC4','pC5'])
 
 prediction = np.concatenate((df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14,df15,df16, df14b),1)
-pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_deeper.csv')
+pd.DataFrame(prediction, columns=['Chr','start','end','Gene','IVF','Donor','NT','FC','pVal','FC','pVal','ON','RepDown','Off','RepUp','Neg','pC1','pC2','pC3','pC4','pC5']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_deeper_neg.csv')
 
 #Now process the results
 #os.chdir('ResultsEndoAll')
@@ -505,7 +503,7 @@ Xexp2[:,0,3] = ( Xexp2[:,0,3] - np.nanmean(Xexpa[trainset,0,3]) ) / np.nanstd(Xe
 
 ScoresSomEct = np.zeros((1,1))
 ScoresSomEct[0,0] = model.evaluate([XchrSomEcto,Xexp2[:,0:3]], YSomEcto, batch_size=32)[1]
-pd.DataFrame(ScoresSomEct, columns=['Accuracy']).to_csv('ResultsSomiteEctoAll/prediction_SomEct_scores.csv')
+pd.DataFrame(ScoresSomEct, columns=['Accuracy']).to_csv('ResultsEndoAll/prediction_SomEct_scores.csv')
 
 predictions = model.predict([XchrSomEcto,Xexp2[:,0:3]], batch_size=1000)
 

@@ -139,7 +139,7 @@ complist = genfromtxt('ChIP_SomiteEndo_All/ComplementarySettGenes.txt',delimiter
 
 #Generate the Y matrix
 Yalt = np.zeros((np.shape(Output2)[0],5))
-Xexpa = np.zeros((np.shape(Output2)[0],1,2))
+Xexpa = np.zeros((np.shape(Output2)[0],1,1))
 
 for i in range(0, np.shape(Yalt)[0]):
       Yalt[i,0] = (np.intersect1d(Output2['f3'][i],onlist)).size
@@ -155,13 +155,21 @@ explist = genfromtxt('ChIP_SomiteEndo_All/edger_de_pairing_BIGtable_endoIVF_somi
 
 for i in range(0, np.shape(Yalt)[0]):
    arr_ind = np.where(Output2['f3'][i] == explist['f0'])
-   Xexpa[i,0,0] = np.log2(explist['f1'][arr_ind].astype('f')+1)
-   Xexpa[i,0,1] = np.log2(explist['f2'][arr_ind].astype('f')+1)
+   #Xexpa[i,0,0] = np.log2(explist['f1'][arr_ind].astype('f')+1)
+   Xexpa[i,0,0] = np.log2(explist['f2'][arr_ind].astype('f')+1)
 
 
 np.nan_to_num(Xexpa,copy=False)
 
-fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_SomiteEndo_All/*bwe.tab'))
+#fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_SomiteEndo_All/*bwe.tab'))
+#DeepXen_All_SomiteEndo_deeper.py
+#fil=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_SomiteEndo_All/*bwe.tab'))
+#fil1=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_SomiteEndo_All/Endo*bwe.tab')) 
+fil2=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_SomiteEndo_All/Endo*bwe.tab'))
+fil3=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_SomiteEndo_All/GC.bwe.tab'))
+fil4=sorted(glob.glob('/mnt/scratch/gurdon/cap76/DeepXen/BW_SomiteEndo_All/*Methylation.bwe.tab'))
+
+fil=fil2+fil3+fil4
 
 #Load in all the expression data
 encoder = LabelEncoder()
@@ -210,7 +218,7 @@ testset=((Output2['f0']==meh.classes_[np.shape(meh.classes_)[0]-3]) | (Output2['
 #Normalise the expression data
 Xexp = copy.deepcopy(Xexpa)
 Xexp[:,0,0] = ( Xexp[:,0,0] - np.nanmean(Xexp[trainset,0,0]) ) / np.nanstd(Xexp[trainset,0,0])
-Xexp[:,0,1] = ( Xexp[:,0,1] - np.nanmean(Xexp[trainset,0,1]) ) / np.nanstd(Xexp[trainset,0,1])
+#Xexp[:,0,1] = ( Xexp[:,0,1] - np.nanmean(Xexp[trainset,0,1]) ) / np.nanstd(Xexp[trainset,0,1])
 #Xexp[:,0,3] = ( Xexp[:,0,3] - np.nanmean(Xexp[trainset,0,3]) ) / np.nanstd(Xexp[trainset,0,3])
 
 Xchra = copy.deepcopy(Xchr)
@@ -267,7 +275,7 @@ flat6 = Flatten()(layer6_1b)
 
 
 #Auxillary input (fully connected) for IVF and Donor expression (and other motifs)
-visible2 = Input(shape=(1,2))
+visible2 = Input(shape=(1,1))
 
 layer5_1 = Dense(10, activation='relu')(visible2)
 flat5 = Flatten()(layer5_1)
@@ -315,17 +323,17 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 
 model.fit([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
-model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/Model_deeper.h5')
+model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/Model_deeper_ectoTargOnly.h5')
 
 
-predictions = model.predict([Xchr,Xexp], batch_size=1000)
+#predictions = model.predict([Xchr,Xexp], batch_size=1000)
 
-Scores = np.zeros((3,1))
-Scores[0,0] = model.evaluate([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
-Scores[1,0] = model.evaluate([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
-Scores[2,0] = model.evaluate([Xchr[valset,:,:],Xexp[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
+#Scores = np.zeros((3,1))
+#Scores[0,0] = model.evaluate([Xchr[trainset,:,:],Xexp[trainset,:,:]], Yalt[trainset,:], batch_size=32)[1]
+#Scores[1,0] = model.evaluate([Xchr[testset,:,:],Xexp[testset,:,:]], Yalt[testset,:], batch_size=32)[1]
+#Scores[2,0] = model.evaluate([Xchr[valset,:,:],Xexp[valset,:,:]], Yalt[valset,:], batch_size=32)[1]
 
-pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_scores_deeper.csv')
+#pd.DataFrame(Scores, columns=['Accuracy']).to_csv('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/prediction_scores_deeper.csv')
 
 #model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsEndoAll/Model.h5')
 

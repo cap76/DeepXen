@@ -311,7 +311,7 @@ callbacks = [GetBest(monitor='val_categorical_accuracy', verbose=1, mode='max')]
 #model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks)
 #model.fit([Xchr[trainset,:,:],Xexp[trainset,:,0:2]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:],Xexp[testset,0:2,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,callbacks=callbacks,class_weight = class_weight)
 
-model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=1000, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
+model.fit([Xchr[trainset,:,:]], Yalt[trainset,:], validation_data=([Xchr[testset,:,:]], Yalt[testset,:]), epochs=500, batch_size=1000,class_weight = class_weight,callbacks=callbacks)
 
 model.save('/mnt/scratch/gurdon/cap76/DeepXen/ResultsSomiteEndoAll/Model_deeper_neg.h5')
 
@@ -470,7 +470,7 @@ for i in range(0, np.shape(YSomEcto)[0]):
       YSomEcto[i,2] = (np.intersect1d(OutSomEcto['f3'][i],offlist)).size
       YSomEcto[i,3] = (np.intersect1d(OutSomEcto['f3'][i],uplist)).size
       YSomEcto[i,4] = 1-max(YSomEcto[i,0:4]) #(np.intersect1d(OutSomEcto['f3'][i],complist)).size
-      Xexp2[i,0,2] = (np.intersect1d(OutSomEcto['f3'][i],foxlist)).size
+      #Xexp2[i,0,2] = (np.intersect1d(OutSomEcto['f3'][i],foxlist)).size
 
 XchrSomEcto = np.zeros((np.shape(OutSomEcto)[0],100,np.shape(fil)[0]))
 for k in range(0, np.shape(fil)[0]):
