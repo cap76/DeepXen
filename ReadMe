@@ -1,0 +1,4 @@
+This repository contains code for running CNNs outlined in Janeva et al. The code is in two parts:
+
+1) The DeepXen subfolder contains pyhton scrupts for running the CNNs.
+2) The Bioinformatics subfolder contains R scripts for further analyses and plotting of results.
