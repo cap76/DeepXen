@@ -1,0 +1,436 @@
+---
+title: "ChIPQC"
+author: "Sara Llorente-Armijo"
+date: "2023-10-26"
+output:
+  html_document:
+    code_folding: show
+    theme: journal
+    highlight: espresso
+    toc: true
+    toc_float: 
+        collapsed: true
+        smooth_scroll: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Set working directory
+options(scipen = 99999, kableExtra.auto_format = FALSE)
+```
+
+```{r libraries}
+library(dplyr)
+library(plyranges)
+library(GenomicFeatures)
+library(ChIPQC)
+```
+
+
+The aim of this script is to do quality control of the ChIP data.
+
+Background: 
+-
+
+Customise annotation as done here: https://support.bioconductor.org/p/70893/
+
+
+```{r}
+chip_bam_file <- "../../outputs/alignment/bwa/H3K36me3_Endo_rep1_filt.sorted.bam"
+# sample = ChIPQCsample(chip_bam_file)
+# sample
+```
+
+
+```{r centromeres}
+# From Smith2021
+centromeres_bed <- "../../data/genomes/teleost_amphibia/Xlae/Xlae10.1/Sequence/centromeres_Smith2021/GSE153058_xla_v10.2_cen_mod.bed"
+
+centromeres_data <- read.table(centromeres_bed, col.names = c("seqnames","start", "end"))
+
+centromeres_gr <- centromeres_data %>% GRanges()
+```
+
+```{r telomeres}
+# From Bassham1998: telomeres range from 10 to over 50kb 
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC121490/
+
+# Load chromosome files
+chr_sizes_file <- "../../data/genomes/teleost_amphibia/Xlae/Xlae10.1/Xlae10_chr.chrom.sizes"
+
+chr_sizes_data <- read.table(chr_sizes_file, col.names = c("seqnames", "size"))
+chr_sizes_data
+
+# Get fiveTelomeres
+fiveTelomeres10kb_gr <- GRanges(seqnames = chr_sizes_data$seqnames,
+        ranges = IRanges(1, 10000))
+fiveTelomeres10kb_gr %>% head()
+fiveTelomeres10kb_gr %>% tail()
+
+fiveTelomeres50kb_gr <- GRanges(seqnames = chr_sizes_data$seqnames,
+        ranges = IRanges(1, 50000))
+fiveTelomeres50kb_gr %>% head()
+fiveTelomeres50kb_gr %>% tail()
+
+# Get threeTelomeres
+threeTelomeres10kb_gr <- GRanges(seqnames = chr_sizes_data$seqnames,
+        ranges = IRanges(chr_sizes_data$size-10000, chr_sizes_data$size))
+threeTelomeres10kb_gr %>% head()
+threeTelomeres10kb_gr %>% tail()
+
+threeTelomeres50kb_gr <- GRanges(seqnames = chr_sizes_data$seqnames,
+        ranges = IRanges(chr_sizes_data$size-50000, chr_sizes_data$size))
+threeTelomeres50kb_gr %>% head()
+threeTelomeres50kb_gr %>% tail()
+```
+
+
+
+```{r load_gtf_genes}
+gtf_file <- "../../data/genomes/teleost_amphibia/Xlae/Xlae10.1/Sequence/Transcriptome/GCF_017654675.1_Xenopus_laevis_v10.1_genomic_modified_chrNames.gtf"
+gtf_all <- rtracklayer::import.gff(gtf_file, colnames = c("type", "gene_id", "transcript_id", "db_xref", "gene", "gene_biotype", "transcript_biotype", "protein_id", "gene_synonym"))
+gtf_gene <- rtracklayer::import.gff(gtf_file, feature.type = "gene", colnames = c("type", "gene_id", "transcript_id", "db_xref", "gene", "gene_biotype", "transcript_biotype", "protein_id", "gene_synonym"))
+gtf_all %>% head()
+gtf_gene %>% head()
+```
+
+```{r promoters}
+promoters200_gr <- promoters(gtf_gene, upstream = 0, downstream = 200)
+promoters200_gr %>% head()
+
+promoters500_gr <- promoters(gtf_gene, upstream = 0, downstream = 500)
+promoters500_gr %>% head()
+
+promoters200to500_gr <- resize(promoters500_gr, width = 300, fix = "end")
+promoters200to500_gr %>% head()
+
+promotersUp1000_gr <- promoters(gtf_gene, upstream = 1000, downstream = 0)
+promotersUp1000_gr %>% head()
+```
+
+```{r cds_exons}
+gtf_cds <- gtf_all %>% filter(type == "CDS")
+gtf_cds %>% head()
+
+gtf_exons <- gtf_all %>% filter(type == "exon")
+gtf_exons %>% head()
+```
+
+```{r introns_5utr_3utr}
+# Get txdb
+gff_file <- "../../data/genomes/teleost_amphibia/Xlae/Xlae10.1/Sequence/Transcriptome/GCF_017654675.1_Xenopus_laevis_v10.1_genomic_shortnames.gff.gz"
+gr <- BiocIO::import(gff_file)
+txdb <- makeTxDbFromGRanges(gr)
+txdb
+
+# Get introns by transcripts
+intronsByTranscript_gr <- intronsByTranscript(txdb)
+intronsByTranscript_gr %>% head()
+# Combine all introns in a single GRanges object
+intronsAll_gr <- unlist(intronsByTranscript_gr) %>% unique()
+intronsAll_gr %>% head()
+intronsAll_gr %>% tail()
+
+# Get 5UTRs
+fiveUTRsByTranscript_gr <- fiveUTRsByTranscript(txdb)
+fiveUTRsByTranscript_gr
+# Combine all 5UTRs in a single GRanges object
+fiveUTRsAll_gr <- unlist(fiveUTRsByTranscript_gr) %>% unique()
+fiveUTRsAll_gr %>% head()
+fiveUTRsAll_gr %>% tail()
+
+# Get 3UTRs
+threeUTRsByTranscript_gr <- threeUTRsByTranscript(txdb)
+threeUTRsByTranscript_gr
+# Combine all 5UTRs in a single GRanges object
+threeUTRsAll_gr <- unlist(threeUTRsByTranscript_gr) %>% unique()
+threeUTRsAll_gr %>% head()
+threeUTRsAll_gr %>% tail()
+
+```
+
+
+```{r annotation}
+xenlae10_annotation <- list(
+  version = "SaraCustom",
+  genes = gtf_gene,
+  promoters200bp = promoters200_gr,
+  promoters200to500bp = promoters200to500_gr,
+  cds = gtf_cds,
+  exons = gtf_exons,
+  introns = intronsAll_gr,
+  fiveUTRs = fiveUTRsAll_gr,
+  threeUTRs = threeUTRsAll_gr,
+  promotersUp1000bp = promotersUp1000_gr,
+  centromeres = centromeres_gr,
+  fiveTelomeres10kb = fiveTelomeres10kb_gr,
+  fiveTelomeres50kb = fiveTelomeres50kb_gr,
+  threeTelomeres10kb = threeTelomeres10kb_gr,
+  threeTelomeres50kb = threeTelomeres50kb_gr
+  )
+```
+
+```{r test}
+testExp <- ChIPQCsample(chip_bam_file, annotation =  xenlae10_annotation)
+# testExp <- ChIPQCsample(chip_bam_file, annotation =  xenlae10_annotation, chromosomes = c("chr1S"))
+plotRegi(testExp) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+
+```{r}
+testExp
+```
+
+
+```{r only_in_chr}
+# # Only the ones within chromosomes
+# 
+# # genes
+# gtf_gene_chr <- gtf_gene %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # gtf_gene_chr %>% head()
+# # gtf_gene_chr %>% tail()
+# 
+# # promoters
+# promoters200_chr_gr <- promoters200_gr %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # promoters200_chr_gr %>% head()
+# # promoters200_chr_gr %>% tail()
+# 
+# promoters200to500_chr_gr <- promoters200to500_gr %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # promoters200to500_chr_gr %>% head()
+# # promoters200to500_chr_gr %>% tail()
+# 
+# # cds and exons
+# gtf_cds_chr <- gtf_cds %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# gtf_cds_chr %>% head()
+# gtf_cds_chr %>% tail()
+# 
+# gtf_exons_chr <- gtf_exons %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # gtf_exons_chr %>% head()
+# # gtf_exons_chr %>% tail()
+# 
+# # introns
+# intronsAll_chr_gr <- intronsAll_gr %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # intronsAll_chr_gr %>% head()
+# # intronsAll_chr_gr %>% tail()
+# 
+# # UTRs
+# fiveUTRsAll_chr_gr <- fiveUTRsAll_gr %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # fiveUTRsAll_chr_gr %>% head()
+# # fiveUTRsAll_chr_gr %>% tail()
+# 
+# threeUTRsAll_chr_gr <- threeUTRsAll_gr %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # threeUTRsAll_chr_gr %>% head()
+# # threeUTRsAll_chr_gr %>% tail()
+# 
+# # promoters up 1kb
+# promotersUp1000_chr_gr <- promotersUp1000_gr %>% data.frame() %>% filter(stringr::str_starts(seqnames, "chr")) %>% GRanges()
+# # promotersUp1000_chr_gr %>% head()
+# # promotersUp1000_chr_gr %>% tail()
+```
+
+```{r annotation_onlyChr}
+# xenlae10_annotation_onlyChr <- list(
+#   version = "SaraCustom",
+#   genes = gtf_gene_chr,
+#   promoters200bp = promoters200_chr_gr,
+#   promoters200to500bp = promoters200to500_chr_gr,
+#   cds = gtf_cds_chr,
+#   exons = gtf_exons_chr,
+#   introns = intronsAll_chr_gr,
+#   fiveUTRs = fiveUTRsAll_chr_gr,
+#   threeUTRs = threeUTRsAll_chr_gr,
+#   promotersUp1000bp = promotersUp1000_chr_gr,
+#   centromeres = centromeres_gr,
+#   fiveTelomeres10kb = fiveTelomeres10kb_gr,
+#   fiveTelomeres50kb = fiveTelomeres50kb_gr,
+#   threeTelomeres10kb = threeTelomeres10kb_gr,
+#   threeTelomeres50kb = threeTelomeres50kb_gr
+#   )
+```
+
+```{r test_onlyChr}
+# testExp_onlyChr <- ChIPQCsample(chip_bam_file, annotation =  xenlae10_annotation_onlyChr)
+# # testExp_onlyChr <- ChIPQCsample(chip_bam_file, annotation =  xenlae10_annotation_onlyChr, chromosomes = c("chr1S"))
+# plotRegi(testExp_onlyChr)
+```
+
+
+```{r}
+# testExp
+# testExp_onlyChr
+```
+Exactly the same when including only chromosomes.
+
+
+
+
+```{r improve_plot, fig.width=8, fig.height=2}
+# testExp_onlyChr1S <- ChIPQCsample(chip_bam_file, annotation =  xenlae10_annotation_onlyChr, chromosomes = c("chr1S"))
+plotRegi(testExp) +
+  scale_y_discrete(labels = "H3K36me3 Endo rep 1") + 
+  coord_fixed(ratio = 1) + 
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(), 
+        # axis.ticks.x = element_line(colour = "black"),
+        # axis.ticks.length.x = unit(0.1,"cm"),
+        axis.text.x = element_text(size = 11, angle = 60, hjust = 1, vjust = 1),
+        axis.text.y = element_text(size = 12),
+        legend.title = element_text(size = 10), 
+        legend.title.align = 0.5, 
+        legend.text = element_text(size = 8),
+        legend.position = "right",
+        legend.justification = "top",
+        legend.direction = "vertical")
+```
+
+## Do it at once for more reps and conditions
+Just for one histone modification, to do not mix it all.
+
+Create .csv file with metadata (example: https://bioconductor.org/packages/release/bioc/vignettes/ChIPQC/inst/doc/ChIPQC.pdf)
+
+Make with ChIPQCsample and join.
+Test first if it would work joining two
+
+```{r}
+# Retrieve genomic profile information in terms of relative enrichment over background genomic distribution
+testExp_regi <- regi(testExp)
+testExp_regi2 <- regi(testExp)
+
+```
+
+```{r}
+testExp_regi
+
+write.table(testExp_regi, file = "testExpr_regi.tsv", sep = "\t", col.names = F, quote = F)
+```
+
+```{r}
+testExp_regi_load <- read.table(file = "testExpr_regi.tsv", col.names = c("GenomicIntervals", "log2_Enrichment"))
+testExp_regi_load
+```
+
+
+
+```{r}
+testExp_regi_all <- cbind(testExp_regi, testExp_regi2)
+testExp_regi_all
+```
+To plot as plotRegi using ggplot2 see: https://github.com/shengqh/ChIPQC/blob/2e196aae8ffce18015913c9494d495dbabdc9687/R/plots.r#L699
+
+```{r}
+# Create data frame for plotting
+meltedDF <- reshape2::melt(testExp_regi_all)
+regiScoresFrame <- data.frame(Sample=meltedDF$Var2,
+                                  GenomicIntervals=meltedDF$Var1,
+                                  log2_Enrichment=meltedDF$value)
+regiScoresFrame
+
+regiScoresFrame[,"GenomicIntervals"] <- factor(regiScoresFrame[,"GenomicIntervals"],levels=unique(as.vector(regiScoresFrame[,"GenomicIntervals"])))
+```
+
+```{r}
+# Plot
+ggplot(regiScoresFrame, aes(Sample,GenomicIntervals)) +
+  geom_tile(aes(y=Sample,x=GenomicIntervals,fill = log2_Enrichment)) +
+  scale_fill_gradient2(low="blue",high="yellow",mid="black",midpoint=median(regiScoresFrame$log2_Enrichment)) +
+  # scale_y_discrete(labels = "H3K36me3 Endo rep 1") + 
+  coord_fixed(ratio = 1) + 
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(), 
+        # axis.ticks.x = element_line(colour = "black"),
+        # axis.ticks.length.x = unit(0.1,"cm"),
+        axis.text.x = element_text(size = 11, angle = 60, hjust = 1, vjust = 1),
+        axis.text.y = element_text(size = 12),
+        legend.title = element_text(size = 10), 
+        legend.title.align = 0.5, 
+        legend.text = element_text(size = 8),
+        legend.position = "right",
+        legend.justification = "top",
+        legend.direction = "vertical")
+```
+
+
+```{r}
+metadata_file <- "../../outputs/chipqc/metadata/H3K36me3_metadata.tsv"
+samples <- read.table(metadata_file, header = T, sep = "\t")
+samples
+```
+
+
+```{r}
+# ChIPQC for all samples
+chipqc_list <- list()
+for (i in 1:nrow(samples)) {
+  chipqc_list[[samples[i,]$SampleID]] <- ChIPQCsample(samples[i,]$bamReads, annotation =  xenlae10_annotation)
+}
+
+# Retrieve genomic profile information in terms of relative enrichment over background genomic distribution
+
+chipqc_regi_list <- list()
+for (i in names(chipqc_list)) {
+  chipqc_regi_list[[i]] <- regi(chipqc_list[[i]])
+}
+chipqc_regi_list
+
+```
+```{r}
+chipqc_regi_all <- do.call(cbind, chipqc_regi_list)
+chipqc_regi_all
+```
+
+```{r}
+# Create data frame for plotting
+meltedDF <- reshape2::melt(chipqc_regi_all)
+regiScoresFrame <- data.frame(Sample=meltedDF$Var2,
+                              GenomicIntervals=meltedDF$Var1,
+                              log2_Enrichment=meltedDF$value) %>% 
+  tidyr::separate(Sample, sep = "_", into = c("Factor", "Tissue", "Replicate"), remove = F)
+
+regiScoresFrame[,"GenomicIntervals"] <- factor(regiScoresFrame[,"GenomicIntervals"],levels=unique(as.vector(regiScoresFrame[,"GenomicIntervals"])))
+
+regiScoresFrame
+```
+
+```{r}
+ggplot(regiScoresFrame) +
+  geom_tile(aes(y=Replicate,x=GenomicIntervals,fill = log2_Enrichment)) +
+  facet_grid(Tissue~Factor, switch = "y") +
+  scale_fill_gradient2(low="blue",high="yellow",mid="black",midpoint=median(regiScoresFrame$log2_Enrichment)) +
+  scale_y_discrete(position = "right") +
+  coord_fixed(ratio = 1) + 
+  theme_minimal() +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank(), 
+        # axis.ticks.x = element_line(colour = "black"),
+        # axis.ticks.length.x = unit(0.1,"cm"),
+        axis.text.x = element_text(size = 11, angle = 60, hjust = 1, vjust = 1),
+        axis.text.y = element_text(size = 11),
+        strip.text.x = element_text(size = 12),
+        strip.text.y = element_text(size = 12),
+        legend.title = element_text(size = 10), 
+        legend.title.align = 0.5, 
+        legend.text = element_text(size = 8),
+        legend.position = "right",
+        legend.justification = "top",
+        legend.direction = "vertical")
+```
+
+
+```{r test_several_samples}
+# chip_bam_file <- "../../outputs/alignment/bwa/H3K36me3_Endo_rep1_filt.sorted.bam"
+# testExp <- ChIPQCsample(chip_bam_file, annotation =  xenlae10_annotation)
+# # testExp <- ChIPQCsample(chip_bam_file, annotation =  xenlae10_annotation, chromosomes = c("chr1S"))
+# plotRegi(testExp) +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90))
+```
+
+
+```{r sessionInfo}
+message(date())
+sessionInfo()
+```
+
